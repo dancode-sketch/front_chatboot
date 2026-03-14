@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth'
  * Esta no redirige automáticamente en errores 401
  */
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -100,8 +100,9 @@ export function useApi() {
   const router = useRouter()
   
   // Crear instancia de axios con configuración base
+  // use relative path when no base url configured (dev proxy mode)
   const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL || '/api',
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json'

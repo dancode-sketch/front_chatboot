@@ -66,7 +66,43 @@ const router = createRouter({
           path: 'asignacion-pedidos',
           name: 'admin-asignacion',
           component: () => import('@/views/admin/AsignacionPedidosView.vue'),
-          meta: { requiresAuth: true }
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'settings',
+          name: 'admin-settings',
+          component: () => import('@/views/admin/SettingsView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'catalog/categories',
+          name: 'admin-categories',
+          component: () => import('@/views/admin/CategoriesView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'catalog/products',
+          name: 'admin-products',
+          component: () => import('@/views/admin/ProductsView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'delivery',
+          name: 'admin-delivery',
+          component: () => import('@/views/admin/DeliveryConfigView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'templates',
+          name: 'admin-templates',
+          component: () => import('@/views/admin/TemplatesView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+          path: 'pedidos',
+          name: 'admin-pedidos',
+          component: () => import('@/views/admin/NewOrderPanel.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true }
         }
       ]
     },
@@ -85,6 +121,10 @@ router.beforeEach((to, from, next) => {
   
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresMotorizadoAuth = to.matched.some(record => record.meta.requiresMotorizadoAuth)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+
+  // debug
+  // console.log('guard:', { requiresAuth, requiresMotorizadoAuth, requiresAdmin, user: authStore.user })
   
   // Rutas de Motorizado
   if (requiresMotorizadoAuth && !authMotorizadoStore.isAuthenticated) {
@@ -95,6 +135,10 @@ router.beforeEach((to, from, next) => {
   // Rutas de Admin
   else if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
+  } else if (requiresAdmin && !authStore.isAdmin) {
+    // usuario autenticado pero no es administrador
+    console.warn('acceso admin negado, rol actual:', authStore.user?.role)
+    next('/dashboard/kds')
   } else if (to.path === '/login' && authStore.isAuthenticated) {
     next('/dashboard/kds')
   }

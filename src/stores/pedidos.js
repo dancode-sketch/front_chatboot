@@ -73,15 +73,32 @@ export const usePedidosStore = defineStore('pedidos', () => {
         offset: filtros.offset || 0
       }
       
-      // Si no hay fecha_desde, por defecto hoy
-      if (!filtros.fecha_desde) {
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-        params.fecha_desde = hoy.toISOString()
+      // Si se pasa fecha exacta, usar rango [mañana 00:00, misma noche 23:59]
+      if (filtros.fecha) {
+        const dia = new Date(filtros.fecha)
+        dia.setHours(0,0,0,0)
+        const siguiente = new Date(dia)
+        siguiente.setDate(dia.getDate()+1)
+        params.fecha_desde = dia.toISOString()
+        params.fecha_hasta = siguiente.toISOString()
       } else {
-        params.fecha_desde = filtros.fecha_desde
+        // calcular fecha desde válida: si se envía, limitar a últimos 7 días
+        let fechaDesde
+        if (filtros.fecha_desde) {
+          fechaDesde = new Date(filtros.fecha_desde)
+          const ahora = new Date()
+          const sieteDias = new Date(ahora)
+          sieteDias.setDate(ahora.getDate() - 7)
+          if (fechaDesde < sieteDias) {
+            fechaDesde = sieteDias
+          }
+        } else {
+          fechaDesde = new Date()
+        }
+        fechaDesde.setHours(0, 0, 0, 0)
+        params.fecha_desde = fechaDesde.toISOString()
       }
-      
+
       if (filtros.estado) {
         params.estado = filtros.estado
       }
@@ -90,6 +107,8 @@ export const usePedidosStore = defineStore('pedidos', () => {
       
       if (error) {
         console.error('Error obteniendo pedidos:', error)
+        const { useNotify } = await import('@/composables/useNotify')
+        useNotify().error('No se pudieron cargar los pedidos: ' + error)
         return { success: false, error }
       }
       
@@ -221,6 +240,27 @@ export const usePedidosStore = defineStore('pedidos', () => {
   /**
    * Obtiene los pedidos del motorizado actual (para el panel)
    */
+
+  /**
+   * Crea un nuevo pedido (usado por formulario admin)
+   * payload debe incluir al menos tipo_entrega y total.
+   */
+  async function createPedido(payload) {
+    loading.value = true
+    try {
+      const { data, error } = await apiHelpers.post(ENDPOINTS.PEDIDOS, payload)
+      if (error) {
+        console.error('Error creando pedido:', error)
+        return { success: false, error }
+      }
+      // insertar al inicio de lista local
+      pedidos.value.unshift(data)
+      return { success: true, data }
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchMisPedidosDelivery() {
     loading.value = true
     
@@ -294,6 +334,7 @@ export const usePedidosStore = defineStore('pedidos', () => {
     fetchPedidosListosParaAsignar,
     asignarMotorizado,
     fetchMisPedidosDelivery,
-    actualizarEstadoDelivery
+    actualizarEstadoDelivery,
+    createPedido
   }
 })

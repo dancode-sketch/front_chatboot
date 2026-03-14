@@ -173,6 +173,87 @@
           <span class="font-medium">Asignar Pedidos</span>
         </RouterLink>
       </div>
+
+      <!-- Configuración adicional -->
+      <div class="mt-6">
+        <h3
+          class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"
+        >
+          Configuración
+        </h3>
+        <RouterLink
+          to="/admin/settings"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/settings')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Settings</span>
+        </RouterLink>
+        <RouterLink
+          to="/admin/catalog/categories"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/catalog/categories')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Categorías</span>
+        </RouterLink>
+        <RouterLink
+          to="/admin/catalog/products"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/catalog/products')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Productos</span>
+        </RouterLink>
+        <RouterLink
+          to="/admin/delivery"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/delivery')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Tarifas Delivery</span>
+        </RouterLink>
+        <RouterLink
+          to="/admin/templates"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/templates')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Plantillas</span>
+        </RouterLink>
+        <RouterLink
+          to="/admin/pedidos"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/pedidos')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Nuevo Pedido</span>
+        </RouterLink>
+      </div>
     </nav>
 
     <!-- Connection Status -->

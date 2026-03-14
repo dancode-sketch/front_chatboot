@@ -3,8 +3,10 @@
  */
 
 // URLs del backend
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-export const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+// En desarrollo usamos rutas relativas (/api, /ws) y confiamos en el proxy de Vite.
+// En producción se puede inyectar la URL completa mediante variables de entorno.
+export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+export const WS_BASE_URL = import.meta.env.VITE_WS_URL || ''
 
 // Endpoints
 export const ENDPOINTS = {
@@ -35,7 +37,23 @@ export const ENDPOINTS = {
   MOTORIZADO_DISPONIBILIDAD: (id) => `/api/motorizados/${id}/disponibilidad`,
   
   // WebSocket
-  WS_KDS: '/ws/kds'
+  WS_KDS: '/ws/kds',
+
+  // Configuración dinámica
+  SETTINGS: '/api/admin/settings',
+
+  // Catálogo
+  CATEGORIES: '/api/admin/categories',
+  CATEGORY_BY_ID: (id) => `/api/admin/categories/${id}`,
+  PRODUCTS: '/api/admin/products',
+  PRODUCT_BY_ID: (id) => `/api/admin/products/${id}`,
+
+  // Delivery
+  DELIVERY: '/api/admin/delivery',
+
+  // Plantillas/mensajes
+  TEMPLATES: '/api/admin/templates',
+  TEMPLATE_BY_ID: (id) => `/api/admin/templates/${id}`
 }
 
 // Estados de pedidos
@@ -109,7 +127,18 @@ export const ESTADO_LABELS = {
 // Tipos de entrega
 export const TIPO_ENTREGA = {
   DELIVERY: 'DELIVERY',
-  RECOJO: 'RECOJO'
+  RECOJO: 'RECOJO',
+  MESA: 'MESA',
+  PRESENCIAL: 'PRESENCIAL'
+}
+
+// Tipos de setting (`type` del backend)
+export const SETTING_TYPES = {
+  STRING: 'STRING',
+  INT: 'INT',
+  FLOAT: 'FLOAT',
+  BOOL: 'BOOL',
+  JSON: 'JSON'
 }
 
 // Tipos de mensaje
@@ -149,3 +178,9 @@ export function generarLinkNavegacion(lat, lng) {
 }
 // alias para compatibilidad con imports erróneos
 export const ESTADOS_PEDIDO = ESTADO_PEDIDO;
+
+// Roles (se espera en el JWT)
+export const USER_ROLES = {
+  ADMIN: 'ADMIN',
+  MOTORIZADO: 'MOTORIZADO'
+}

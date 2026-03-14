@@ -14,6 +14,10 @@ export const useAuthStore = defineStore('auth', () => {
   const authHeader = computed(() => {
     return token.value ? { Authorization: `Bearer ${token.value}` } : {}
   })
+  const isAdmin = computed(() => {
+    const r = user.value?.role
+    return typeof r === 'string' && r.toUpperCase() === 'ADMIN'
+  })
   
   /**
    * Inicia sesión
@@ -32,6 +36,29 @@ export const useAuthStore = defineStore('auth', () => {
       // Guardar token y usuario
       token.value = data.access_token
       user.value = data.user
+      console.log('Login user data', JSON.stringify(user.value))
+      // si el token trae un role distinto, puede actualizarse aquí
+
+      // cargar configuración inicial para usuarios admin
+      if (user.value?.role === 'ADMIN') {
+        const { useSettingsStore } = await import('@/stores/settings')
+        const { useCategoriesStore } = await import('@/stores/categories')
+        const { useProductsStore } = await import('@/stores/products')
+        const { useDeliveryStore } = await import('@/stores/delivery')
+        const { useTemplatesStore } = await import('@/stores/templates')
+
+        const settingsStore = useSettingsStore()
+        const categoriesStore = useCategoriesStore()
+        const productsStore = useProductsStore()
+        const deliveryStore = useDeliveryStore()
+        const templatesStore = useTemplatesStore()
+
+        settingsStore.fetchSettings()
+        categoriesStore.fetchCategories()
+        productsStore.fetchProducts(true) // solo activos por defecto
+        deliveryStore.fetchConfig()
+        templatesStore.fetchTemplates()
+      }
       
       // Persistir en localStorage
       localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token)
@@ -58,7 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Verifica autenticación desde localStorage
    */
-  function checkAuth() {
+  async function checkAuth() {
     const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
     const storedUser = localStorage.getItem(STORAGE_KEYS.USER)
     
@@ -66,6 +93,21 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         token.value = storedToken
         user.value = JSON.parse(storedUser)
+        console.log('Checked auth user', JSON.stringify(user.value))
+        // si es administrador cargar datos iniciales
+        if (user.value?.role === 'ADMIN') {
+          const { useSettingsStore } = await import('@/stores/settings')
+          const { useCategoriesStore } = await import('@/stores/categories')
+          const { useProductsStore } = await import('@/stores/products')
+          const { useDeliveryStore } = await import('@/stores/delivery')
+          const { useTemplatesStore } = await import('@/stores/templates')
+
+          useSettingsStore().fetchSettings()
+          useCategoriesStore().fetchCategories()
+          useProductsStore().fetchProducts(true)
+          useDeliveryStore().fetchConfig()
+          useTemplatesStore().fetchTemplates()
+        }
       } catch (error) {
         console.error('Error parseando usuario guardado:', error)
         logout()
@@ -98,6 +140,7 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Getters
     isAuthenticated,
+    isAdmin,
     authHeader,
     
     // Actions

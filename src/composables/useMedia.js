@@ -43,7 +43,10 @@ export function useMedia() {
 
     try {
       // Usar fetch con Authorization header
-      const url = `${API_BASE_URL}/api/clientes/media/${mediaId}/download`
+      // prefer relative URL for development with proxy; fall back to API_BASE_URL if provided
+      const url = API_BASE_URL
+        ? `${API_BASE_URL}/api/clientes/media/${mediaId}/download`
+        : `/api/clientes/media/${mediaId}/download`
       console.log('[useMedia] Descargando desde:', url);
       
       const response = await fetch(url, {
@@ -56,6 +59,11 @@ export function useMedia() {
         console.error('[useMedia] Error en respuesta:', response.status, response.statusText);
         const errorText = await response.text()
         console.error('[useMedia] Detalle:', errorText);
+        // opcional: notificar al usuario
+        try {
+          const { useNotify } = await import('@/composables/useNotify')
+          useNotify().warning('No se pudo descargar multimedia (estado ' + response.status + ')')
+        } catch {}
         return null
       }
 

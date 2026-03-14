@@ -35,9 +35,20 @@
         </div>
       </div>
 
-      <!-- Fecha -->
-      <div class="text-xs md:text-sm text-gray-500">
-        <span class="font-medium">{{ fechaActual }}</span>
+      <!-- Fecha filtro -->
+      <div class="flex items-center space-x-2">
+        <label class="text-xs md:text-sm text-gray-500 font-medium" for="desde"
+          >Desde:</label
+        >
+        <input
+          id="desde"
+          type="date"
+          :max="maxDate"
+          :min="minDate"
+          v-model="fechaFiltro"
+          @change="fetchPedidos"
+          class="text-xs md:text-sm text-gray-700 border rounded px-2 py-1"
+        />
       </div>
     </div>
 
@@ -146,13 +157,28 @@ const fechaActual = computed(() =>
   formatDate(new Date(), "DD [de] MMMM [de] YYYY"),
 );
 
+// filtro de fecha (string yyyy-mm-dd)
+const fechaFiltro = ref(new Date().toISOString().substr(0, 10));
+
+// mínimo 7 días atrás
+const minDate = computed(() => {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return d.toISOString().substr(0, 10);
+});
+// máximo hoy
+const maxDate = computed(() => {
+  return new Date().toISOString().substr(0, 10);
+});
+
 onMounted(() => {
   fetchPedidos();
 });
 
 async function fetchPedidos() {
   loading.value = true;
-  const { success, error } = await pedidosStore.fetchPedidos();
+  const filtros = { fecha: fechaFiltro.value };
+  const { success, error } = await pedidosStore.fetchPedidos(filtros);
   loading.value = false;
 
   if (!success) {

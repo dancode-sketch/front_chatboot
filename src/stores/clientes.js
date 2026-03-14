@@ -182,7 +182,7 @@ export const useClientesStore = defineStore('clientes', () => {
    * Cambia el estado del bot (pausado/activo)
    */
   async function toggleBotStatus(telefono, botPausado) {
-    const { data, error } = await put(ENDPOINTS.TOGGLE_BOT(telefono), {
+    const { data, error } = await apiHelpers.put(ENDPOINTS.TOGGLE_BOT(telefono), {
       bot_pausado: botPausado
     })
     
@@ -213,7 +213,7 @@ export const useClientesStore = defineStore('clientes', () => {
       return { success: false, error: 'Nombre requerido' }
     }
 
-    const { data, error } = await put(ENDPOINTS.TOGGLE_BOT(telefono), {
+    const { data, error } = await apiHelpers.put(ENDPOINTS.TOGGLE_BOT(telefono), {
       nombre: nombre.trim()
     })
     

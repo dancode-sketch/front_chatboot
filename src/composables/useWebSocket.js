@@ -15,7 +15,10 @@ export function useWebSocket() {
    */
   const connect = () => {
     try {
-      const wsUrl = `${WS_BASE_URL}${ENDPOINTS.WS_KDS}`
+      // use relative ws path when base is blank (dev proxy)
+      const wsUrl = WS_BASE_URL
+        ? `${WS_BASE_URL}${ENDPOINTS.WS_KDS}`
+        : `${window.location.origin.replace(/^http/, 'ws')}${ENDPOINTS.WS_KDS}`
       console.log('🌐 Intentando conectar WebSocket a:', wsUrl)
       ws.value = new WebSocket(wsUrl)
       
