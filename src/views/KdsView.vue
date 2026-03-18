@@ -35,20 +35,10 @@
         </div>
       </div>
 
-      <!-- Fecha filtro -->
-      <div class="flex items-center space-x-2">
-        <label class="text-xs md:text-sm text-gray-500 font-medium" for="desde"
-          >Desde:</label
-        >
-        <input
-          id="desde"
-          type="date"
-          :max="maxDate"
-          :min="minDate"
-          v-model="fechaFiltro"
-          @change="fetchPedidos"
-          class="text-xs md:text-sm text-gray-700 border rounded px-2 py-1"
-        />
+      <!-- Fecha y hora actual (solo para mostrar, no editable) -->
+      <div class="text-sm text-gray-600">
+        <span class="font-medium">Fecha y hora:</span>
+        <span class="font-semibold ml-1">{{ currentDateTime }}</span>
       </div>
     </div>
 
@@ -56,10 +46,10 @@
     <!-- Móvil: 1 columna scrollable verticalmente -->
     <!-- Tablet: 2-3 columnas con scroll horizontal -->
     <!-- Desktop: 7 columnas grid normal (incluyendo estados de delivery) -->
-    <div class="flex-1 overflow-hidden">
-      <div class="h-full overflow-x-auto overflow-y-hidden">
+    <div class="flex-1 overflow-auto">
+      <div class="overflow-x-auto overflow-y-auto">
         <div
-          class="h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 md:gap-4 min-w-min pb-4"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-4 min-w-min pb-4"
         >
           <!-- Columna PENDIENTE -->
           <KanbanColumn
@@ -68,7 +58,11 @@
             :color="'yellow'"
             :estado="ESTADO_PEDIDO.PENDIENTE"
             @actualizar-estado="handleActualizarEstado"
-          />
+          >
+            <template #default="{ pedido, color }">
+              <KdsOrderCard :pedido="pedido" :color="color" />
+            </template>
+          </KanbanColumn>
 
           <!-- Columna PREPARANDO -->
           <KanbanColumn
@@ -77,7 +71,11 @@
             :color="'blue'"
             :estado="ESTADO_PEDIDO.PREPARANDO"
             @actualizar-estado="handleActualizarEstado"
-          />
+          >
+            <template #default="{ pedido, color }">
+              <KdsOrderCard :pedido="pedido" :color="color" />
+            </template>
+          </KanbanColumn>
 
           <!-- Columna LISTO -->
           <KanbanColumn
@@ -86,7 +84,11 @@
             :color="'green'"
             :estado="ESTADO_PEDIDO.LISTO"
             @actualizar-estado="handleActualizarEstado"
-          />
+          >
+            <template #default="{ pedido, color }">
+              <KdsOrderCard :pedido="pedido" :color="color" />
+            </template>
+          </KanbanColumn>
 
           <!-- Columna ASIGNADO (Delivery) -->
           <KanbanColumn
@@ -132,52 +134,111 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { usePedidosStore } from "@/stores/pedidos";
+import { useOrderStore } from "@/stores/order";
 import { useNotify } from "@/composables/useNotify";
 import { ESTADO_PEDIDO, ESTADO_LABELS } from "@/utils/constants";
 import { formatDate } from "@/utils/formatters";
 import KanbanColumn from "@/components/kds/KanbanColumn.vue";
+import KdsOrderCard from "@/components/kds/KdsOrderCard.vue";
 
 const pedidosStore = usePedidosStore();
+const orderStore = useOrderStore();
 const notify = useNotify();
 
 const loading = ref(false);
 
-const pedidosPendientes = computed(() => pedidosStore.pedidosPendientes);
-const pedidosPreparando = computed(() => pedidosStore.pedidosPreparando);
-const pedidosListos = computed(() => pedidosStore.pedidosListos);
+function groupBy(items, keyFn) {
+  return items.reduce((acc, item) => {
+    const key = keyFn(item);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+}
+
+function buildGroupsFromOrders(orders) {
+  const groups = {
+    [ESTADO_PEDIDO.PENDIENTE]: [],
+    [ESTADO_PEDIDO.PREPARANDO]: [],
+    [ESTADO_PEDIDO.LISTO]: [],
+  };
+
+  orders.forEach((order) => {
+    const detalles = order.detalles || order.items || [];
+    const byEstado = groupBy(
+      detalles,
+      (d) => d.estado_cocina || ESTADO_PEDIDO.PENDIENTE,
+    );
+
+    Object.entries(byEstado).forEach(([estado, items]) => {
+      if (!groups[estado]) return;
+      groups[estado].push({ ...order, detalles: items });
+    });
+  });
+
+  return groups;
+}
+
+const groupedPedidos = computed(() => buildGroupsFromOrders(orderStore.orders));
+
+const pedidosPendientes = computed(
+  () => groupedPedidos.value[ESTADO_PEDIDO.PENDIENTE] || [],
+);
+const pedidosPreparando = computed(
+  () => groupedPedidos.value[ESTADO_PEDIDO.PREPARANDO] || [],
+);
+const pedidosListos = computed(
+  () => groupedPedidos.value[ESTADO_PEDIDO.LISTO] || [],
+);
+
+// No cambiamos los otros estados (delivery/etc), seguir usando pedidosStore si los necesitas
 const pedidosAsignados = computed(() => pedidosStore.pedidosAsignados);
 const pedidosEnCamino = computed(() => pedidosStore.pedidosEnCamino);
 const pedidosEntregados = computed(() => pedidosStore.pedidosEntregados);
 const pedidosCancelados = computed(() => pedidosStore.pedidosCancelados);
-const totalPedidos = computed(() => pedidosStore.totalPedidos);
+const totalPedidos = computed(() => orderStore.orders.length);
 
-const fechaActual = computed(() =>
-  formatDate(new Date(), "DD [de] MMMM [de] YYYY"),
-);
+// Fecha y hora actuales (se actualiza cada segundo)
+const currentDateTime = ref(formatDate(new Date(), "DD/MM/YYYY HH:mm:ss"));
 
-// filtro de fecha (string yyyy-mm-dd)
-const fechaFiltro = ref(new Date().toISOString().substr(0, 10));
-
-// mínimo 7 días atrás
-const minDate = computed(() => {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return d.toISOString().substr(0, 10);
-});
-// máximo hoy
-const maxDate = computed(() => {
-  return new Date().toISOString().substr(0, 10);
-});
+let clockInterval = null;
 
 onMounted(() => {
-  fetchPedidos();
+  clockInterval = setInterval(() => {
+    currentDateTime.value = formatDate(new Date(), "DD/MM/YYYY HH:mm:ss");
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (clockInterval) clearInterval(clockInterval);
+});
+
+function formatLocalDateForInput(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+onMounted(async () => {
+  console.log("KDS view mounted");
+  await fetchPedidos();
+
+  // También cargar datos específicos de KDS (items pendientes)
+  await orderStore.fetchKdsOrders();
+  console.log("KDS orders fetched", orderStore.orders);
 });
 
 async function fetchPedidos() {
   loading.value = true;
-  const filtros = { fecha: fechaFiltro.value };
+
+  // Siempre consultamos por la fecha actual (local) para que el KDS muestre lo de hoy.
+  const filtros = {
+    fecha: formatLocalDateForInput(),
+  };
+
   const { success, error } = await pedidosStore.fetchPedidos(filtros);
   loading.value = false;
 

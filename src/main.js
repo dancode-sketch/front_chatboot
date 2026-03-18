@@ -26,4 +26,19 @@ app.use(Toast, {
   rtl: false
 })
 
+// Directiva de roles: muestra/oculta elementos según roles del usuario
+import { useAuthStore } from '@/stores/auth'
+app.directive('role', {
+  mounted(el, binding) {
+    const authStore = useAuthStore()
+    const requiredRoles = Array.isArray(binding.value)
+      ? binding.value
+      : [binding.value]
+
+    if (!authStore.hasAnyRole(requiredRoles)) {
+      el.style.display = 'none'
+    }
+  },
+})
+
 app.mount('#app')

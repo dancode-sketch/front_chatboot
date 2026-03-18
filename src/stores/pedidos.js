@@ -184,6 +184,81 @@ export const usePedidosStore = defineStore('pedidos', () => {
   }
   
   /**
+   * Agrega ítems a un pedido (ronda 2)
+   */
+  async function agregarItems(pedidoId, items) {
+    const { data, error } = await apiHelpers.post(
+      ENDPOINTS.ENVIAR_ITEMS_COCINA(pedidoId),
+      { items },
+    )
+
+    if (error) {
+      console.error('Error agregando items al pedido:', error)
+      if (Array.isArray(error) && error.length > 0) {
+        console.error('Primer error de validación:', error[0])
+      }
+      return { success: false, error }
+    }
+
+    // Actualizamos el pedido localmente si viene actualizado
+    if (data?.pedido) {
+      const index = pedidos.value.findIndex(p => p.id === pedidoId)
+      if (index !== -1) pedidos.value[index] = normalizePedido(data.pedido)
+    }
+
+    return { success: true, data }
+  }
+
+  /**
+   * Marca el estado de cocina de un ítem (PATCH /items/{itemId}/estado)
+   */
+  async function actualizarEstadoItem(pedidoId, itemId, estado) {
+    const { data, error } = await apiHelpers.patch(
+      ENDPOINTS.PEDIDO_ITEM_ESTADO(pedidoId, itemId),
+      { estado_cocina: estado },
+    )
+
+    if (error) {
+      console.error('Error actualizando estado de item:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, data }
+  }
+
+  /**
+   * Obtiene la comanda para imprimir (KDS)
+   */
+  async function getComanda(pedidoId) {
+    const { data, error } = await apiHelpers.get(
+      ENDPOINTS.COMANDA(pedidoId),
+    )
+
+    if (error) {
+      console.error('Error obteniendo comanda:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, data }
+  }
+
+  /**
+   * Obtiene la pre-cuenta de un pedido
+   */
+  async function getPreCuenta(pedidoId) {
+    const { data, error } = await apiHelpers.get(
+      ENDPOINTS.PRECUENTA(pedidoId),
+    )
+
+    if (error) {
+      console.error('Error obteniendo pre-cuenta:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, data }
+  }
+
+  /**
    * Obtiene pedidos listos para asignar a motorizado
    */
   async function fetchPedidosListosParaAsignar() {
@@ -331,6 +406,10 @@ export const usePedidosStore = defineStore('pedidos', () => {
     actualizarPedido,
     fetchPedidoById,
     limpiarPedidos,
+    agregarItems,
+    actualizarEstadoItem,
+    getComanda,
+    getPreCuenta,
     fetchPedidosListosParaAsignar,
     asignarMotorizado,
     fetchMisPedidosDelivery,

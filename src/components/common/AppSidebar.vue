@@ -7,8 +7,8 @@
   ></div>
 
   <aside
-    class="fixed lg:static w-64 bg-white border-r border-gray-200 flex flex-col h-full z-50 transition-transform duration-300 lg:transform-none"
-    :class="isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    class="fixed w-64 bg-white border-r border-gray-200 flex flex-col h-full z-50 transition-transform duration-300"
+    :class="isOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <!-- Logo -->
     <div class="h-16 flex items-center px-6 border-b border-gray-200">
@@ -36,8 +36,8 @@
 
     <!-- Navigation -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-      <!-- Sección Principal -->
-      <div class="mb-6">
+      <!-- Sección Principal (cualquier usuario autenticado) -->
+      <div v-if="authStore.isAuthenticated" class="mb-6">
         <h3
           class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"
         >
@@ -106,10 +106,38 @@
             {{ mensajesStore.mensajesSinLeer }}
           </span>
         </RouterLink>
+
+        <RouterLink
+          v-if="authStore.hasAnyRole(['ADMIN', 'MESERO'])"
+          to="/pos/mapa"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/pos/mapa')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Mapa de Mesas</span>
+        </RouterLink>
+
+        <RouterLink
+          v-if="authStore.hasAnyRole(['ADMIN', 'MESERO'])"
+          to="/dashboard/pedidos"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/dashboard/pedidos')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Pedidos</span>
+        </RouterLink>
       </div>
 
-      <!-- Sección Delivery -->
-      <div>
+      <!-- Sección Delivery (solo ADMIN) -->
+      <div v-if="authStore.hasRole('ADMIN')">
         <h3
           class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"
         >
@@ -175,7 +203,7 @@
       </div>
 
       <!-- Configuración adicional -->
-      <div class="mt-6">
+      <div v-if="authStore.hasRole('ADMIN')" class="mt-6">
         <h3
           class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"
         >
@@ -218,6 +246,18 @@
           <span class="font-medium">Productos</span>
         </RouterLink>
         <RouterLink
+          to="/admin/mesas"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/mesas')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Mesas / Zonas</span>
+        </RouterLink>
+        <RouterLink
           to="/admin/delivery"
           @click="$emit('close')"
           class="flex items-center px-4 py-3 rounded-lg transition-colors"
@@ -241,19 +281,46 @@
         >
           <span class="font-medium">Plantillas</span>
         </RouterLink>
-        <RouterLink
-          to="/admin/pedidos"
-          @click="$emit('close')"
-          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+      </div>
+
+      <!-- Opciones para CAJERO y MESERO fuera de admin -->
+      <RouterLink
+        v-if="authStore.hasAnyRole(['ADMIN', 'MESERO', 'CAJERO'])"
+        to="/dashboard/pedidos"
+        @click="$emit('close')"
+        class="flex items-center px-4 py-3 rounded-lg transition-colors"
+        :class="
+          isActive('/dashboard/pedidos')
+            ? 'bg-primary text-white'
+            : 'text-gray-700 hover:bg-gray-100'
+        "
+      >
+        <span class="font-medium">Nuevo Pedido</span>
+      </RouterLink>
+
+      <RouterLink
+        v-if="authStore.hasAnyRole(['ADMIN', 'CAJERO'])"
+        to="/dashboard/caja"
+        @click="$emit('close')"
+        class="flex items-center px-4 py-3 rounded-lg transition-colors"
+        :class="
+          isActive('/dashboard/caja')
+            ? 'bg-primary text-white'
+            : 'text-gray-700 hover:bg-gray-100'
+        "
+      >
+        <span class="font-medium">Caja</span>
+        <span
+          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full"
           :class="
-            isActive('/admin/pedidos')
-              ? 'bg-primary text-white'
-              : 'text-gray-700 hover:bg-gray-100'
+            cajaStore.isCajaAbierta
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-600'
           "
         >
-          <span class="font-medium">Nuevo Pedido</span>
-        </RouterLink>
-      </div>
+          {{ cajaStore.isCajaAbierta ? "Abierta" : "Cerrada" }}
+        </span>
+      </RouterLink>
     </nav>
 
     <!-- Connection Status -->
@@ -273,11 +340,13 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { usePedidosStore } from "@/stores/pedidos";
 import { useWebSocketStore } from "@/stores/websocket";
 import { useMensajesStore } from "@/stores/mensajes";
+import { useAuthStore } from "@/stores/auth";
+import { useCajaStore } from "@/stores/caja";
 import { ESTADO_PEDIDO } from "@/utils/constants";
 
 defineProps({
@@ -294,10 +363,17 @@ const mensajesStore = useMensajesStore();
 const pedidosStore = usePedidosStore();
 const wsStore = useWebSocketStore();
 
+const authStore = useAuthStore();
+const cajaStore = useCajaStore();
+
 const pedidosPendientes = computed(
   () => pedidosStore.pedidosPorEstado(ESTADO_PEDIDO.PENDIENTE).length,
 );
 const wsConnected = computed(() => wsStore.connected);
+
+onMounted(() => {
+  cajaStore.verificarEstadoCaja();
+});
 
 function isActive(path) {
   return route.path === path;

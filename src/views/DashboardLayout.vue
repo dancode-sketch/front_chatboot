@@ -4,12 +4,43 @@
     <AppSidebar :isOpen="sidebarOpen" @close="sidebarOpen = false" />
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <div
+      :class="[
+        'flex-1 flex flex-col min-w-0 transition-all duration-300',
+        sidebarOpen ? 'lg:ml-64' : 'lg:ml-0',
+      ]"
+    >
       <!-- Header -->
       <AppHeader @toggle-sidebar="sidebarOpen = !sidebarOpen" />
 
       <!-- Page Content -->
       <main class="flex-1 overflow-auto">
+        <!-- Ejemplo de roles: muestras u ocultar elementos según autorización -->
+        <div class="p-4 border-b border-gray-200 bg-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-semibold">Acciones rápidas</div>
+              <div class="text-xs text-gray-500">
+                Roles: {{ authStore.roleList.join(", ") || "Ninguno" }}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                v-role="['ADMIN']"
+                class="px-3 py-1 rounded bg-blue-600 text-white text-xs"
+              >
+                Vista Admin
+              </button>
+              <button
+                v-role="['CAJERO']"
+                class="px-3 py-1 rounded bg-green-600 text-white text-xs"
+              >
+                Cerrar caja
+              </button>
+            </div>
+          </div>
+        </div>
+
         <RouterView />
       </main>
     </div>
@@ -27,7 +58,7 @@ import { useAuthStore } from "@/stores/auth";
 const wsStore = useWebSocketStore();
 const mensajesStore = useMensajesStore();
 const authStore = useAuthStore();
-const sidebarOpen = ref(false);
+const sidebarOpen = ref(true);
 let mensajesInterval = null;
 
 onMounted(() => {
@@ -50,7 +81,7 @@ onMounted(() => {
         clearInterval(mensajesInterval);
         mensajesInterval = null;
       }
-    }
+    },
   );
 });
 

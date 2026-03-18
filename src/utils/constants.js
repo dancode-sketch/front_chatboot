@@ -53,7 +53,29 @@ export const ENDPOINTS = {
 
   // Plantillas/mensajes
   TEMPLATES: '/api/admin/templates',
-  TEMPLATE_BY_ID: (id) => `/api/admin/templates/${id}`
+  TEMPLATE_BY_ID: (id) => `/api/admin/templates/${id}`,
+
+  // Mesas / Zonas
+  ZONAS: '/api/mesas/zonas',
+  ZONA_BY_ID: (id) => `/api/mesas/zonas/${id}`,
+  MESAS: '/api/mesas',
+  MESA_BY_ID: (id) => `/api/mesas/${id}`,
+  MAPA_MESAS: '/api/mesas/mapa',
+
+  // Caja / Arqueo
+  CAJA_RESUMEN: '/api/caja/resumen',
+  CAJA_ABRIR: '/api/caja/abrir',
+  CAJA_EGRESO: '/api/caja/egreso',
+  CAJA_CERRAR: '/api/caja/cerrar',
+
+  // Pagos
+  PAGOS_POR_PEDIDO: (pedidoId) => `/api/pagos/${pedidoId}`,
+
+  // Comandas / Cocina
+  ENVIAR_ITEMS_COCINA: (pedidoId) => `/api/pedidos/${pedidoId}/items`,
+  PRECUENTA: (pedidoId) => `/api/pedidos/${pedidoId}/impresion/precuenta`,
+  COMANDA: (pedidoId) => `/api/pedidos/${pedidoId}/impresion/comanda`,
+  PEDIDO_ITEM_ESTADO: (pedidoId, itemId) => `/api/pedidos/${pedidoId}/items/${itemId}/estado`,
 }
 
 // Estados de pedidos
@@ -156,6 +178,7 @@ export const TIPO_MENSAJE = {
 export const STORAGE_KEYS = {
   TOKEN: 'auth_token',
   USER: 'auth_user',
+  ROLES: 'auth_roles',
   MOTORIZADO_TOKEN: 'motorizado_token',
   MOTORIZADO_USER: 'motorizado_user'
 }

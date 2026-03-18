@@ -4,10 +4,10 @@
   >
     <!-- Left Section -->
     <div class="flex items-center space-x-3">
-      <!-- Hamburger Menu Button (solo móvil) -->
+      <!-- Hamburger Menu Button (desktop/tablet + móvil) -->
       <button
         @click="$emit('toggle-sidebar')"
-        class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         title="Menú"
       >
         <svg

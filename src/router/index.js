@@ -45,6 +45,18 @@ const router = createRouter({
           name: 'chat',
           component: () => import('@/views/ChatView.vue'),
           meta: { requiresAuth: true }
+        },
+        {
+          path: 'caja',
+          name: 'dashboard-caja',
+          component: () => import('@/views/admin/CashRegisterView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'CAJERO', 'MESERO'] }
+        },
+        {
+          path: 'pedidos',
+          name: 'dashboard-pedidos',
+          component: () => import('@/views/OrdersListView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'MESERO'] }
         }
       ]
     },
@@ -66,44 +78,81 @@ const router = createRouter({
           path: 'asignacion-pedidos',
           name: 'admin-asignacion',
           component: () => import('@/views/admin/AsignacionPedidosView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'settings',
           name: 'admin-settings',
           component: () => import('@/views/admin/SettingsView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'catalog/categories',
           name: 'admin-categories',
           component: () => import('@/views/admin/CategoriesView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'catalog/products',
           name: 'admin-products',
           component: () => import('@/views/admin/ProductsView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'delivery',
           name: 'admin-delivery',
           component: () => import('@/views/admin/DeliveryConfigView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'templates',
           name: 'admin-templates',
           component: () => import('@/views/admin/TemplatesView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
+        },
+        {
+          path: 'mesas',
+          name: 'admin-mesas',
+          component: () => import('@/views/admin/TableAdminView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
           path: 'pedidos',
           name: 'admin-pedidos',
           component: () => import('@/views/admin/NewOrderPanel.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true }
+          meta: { requiresAuth: true, roles: ['ADMIN', 'CAJERO', 'MESERO'] }
+        },
+        {
+          path: 'caja',
+          name: 'admin-caja',
+          component: () => import('@/views/admin/CashRegisterView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'CAJERO'] }
         }
+      ]
+    },
+    {
+      path: '/pos',
+      component: () => import('@/views/DashboardLayout.vue'),
+      meta: { requiresAuth: true, roles: ['ADMIN', 'MESERO'] },
+      children: [
+        {
+          path: 'mapa',
+          name: 'pos-mapa',
+          component: () => import('@/views/TableMapView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'MESERO'] }
+        },
+        {
+          path: 'nueva-orden',
+          name: 'pos-nueva-orden',
+          component: () => import('@/views/pos/PosNewOrderView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'MESERO'] }
+        },
+        {
+          path: 'orden/:id',
+          name: 'OrdenActiva',
+          component: () => import('@/views/pos/PosOrderView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'MESERO'] }
+        },
       ]
     },
     // Redirects
@@ -119,9 +168,14 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const authMotorizadoStore = useAuthMotorizadoStore()
   
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  const requiresMotorizadoAuth = to.matched.some(record => record.meta.requiresMotorizadoAuth)
-  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+  const requiresMotorizadoAuth = to.matched.some(
+    (record) => record.meta.requiresMotorizadoAuth,
+  )
+  const requiredRoles = to.matched
+    .map((record) => record.meta.roles)
+    .filter(Boolean)
+    .flat()
 
   // debug
   // console.log('guard:', { requiresAuth, requiresMotorizadoAuth, requiresAdmin, user: authStore.user })
@@ -132,12 +186,19 @@ router.beforeEach((to, from, next) => {
   } else if (to.path === '/motorizado/login' && authMotorizadoStore.isAuthenticated) {
     next('/motorizado/panel')
   }
-  // Rutas de Admin
+  // Rutas de Admin / Auth
   else if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else if (requiresAdmin && !authStore.isAdmin) {
-    // usuario autenticado pero no es administrador
-    console.warn('acceso admin negado, rol actual:', authStore.user?.role)
+  } else if (
+    requiredRoles.length > 0 &&
+    !authStore.hasAnyRole(requiredRoles)
+  ) {
+    console.warn(
+      'Acceso denegado. Roles necesarios:',
+      requiredRoles,
+      'Roles usuario:',
+      authStore.roleList,
+    )
     next('/dashboard/kds')
   } else if (to.path === '/login' && authStore.isAuthenticated) {
     next('/dashboard/kds')

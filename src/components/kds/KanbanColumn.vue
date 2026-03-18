@@ -34,16 +34,15 @@
     </div>
 
     <!-- Lista de Pedidos -->
-    <div
-      v-show="!collapsed"
-      class="flex-1 overflow-y-auto scrollbar-thin space-y-3 transition-all duration-200"
-    >
-      <PedidoCard
-        v-for="pedido in pedidos"
-        :key="pedido.id"
-        :pedido="pedido"
-        @actualizar-estado="$emit('actualizar-estado', $event)"
-      />
+    <div v-show="!collapsed" class="space-y-3 transition-all duration-200">
+      <template v-for="pedido in pedidos" :key="pedido.id">
+        <slot :pedido="pedido" :color="color">
+          <PedidoCard
+            :pedido="pedido"
+            @actualizar-estado="$emit('actualizar-estado', $event)"
+          />
+        </slot>
+      </template>
 
       <!-- Empty State -->
       <div

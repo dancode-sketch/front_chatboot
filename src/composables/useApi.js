@@ -8,7 +8,9 @@ import { useAuthStore } from '@/stores/auth'
  * Esta no redirige automáticamente en errores 401
  */
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL || '/api',
+  // Permitimos usar un base URL configurable (VITE_API_URL).
+  // Si no se provee, dejamos que sea relativo al origen (p.ej. /api/... cuando usamos proxy Vite).
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -79,17 +81,33 @@ export const apiHelpers = {
   }
 }
 
+function safeStringify(value) {
+  const seen = new WeakSet()
+  try {
+    return JSON.stringify(value, (key, val) => {
+      if (typeof val === 'object' && val !== null) {
+        if (seen.has(val)) return '[Circular]'
+        seen.add(val)
+      }
+      return val
+    })
+  } catch {
+    return String(value)
+  }
+}
+
 function getErrorMessage(error) {
-  if (error.response?.data?.detail) {
-    return error.response.data.detail
+  if (!error) return 'Error de conexión con el servidor'
+  if (typeof error === 'string') return error
+  if (error.response?.data) {
+    const data = error.response.data
+    if (typeof data === 'string') return data
+    if (data.detail) return data.detail
+    if (data.message) return data.message
+    return safeStringify(data)
   }
-  if (error.response?.data?.message) {
-    return error.response.data.message
-  }
-  if (error.message) {
-    return error.message
-  }
-  return 'Error de conexión con el servidor'
+  if (error.message) return error.message
+  return safeStringify(error)
 }
 
 /**
@@ -102,7 +120,7 @@ export function useApi() {
   // Crear instancia de axios con configuración base
   // use relative path when no base url configured (dev proxy mode)
   const api = axios.create({
-    baseURL: API_BASE_URL || '/api',
+    baseURL: API_BASE_URL,
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json'

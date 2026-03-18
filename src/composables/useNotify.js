@@ -33,13 +33,29 @@ export function useNotify() {
   /**
    * Convierte el mensaje a string si es necesario
    */
+  const safeStringify = (value) => {
+    const seen = new WeakSet()
+    try {
+      return JSON.stringify(value, (key, val) => {
+        if (typeof val === 'object' && val !== null) {
+          if (seen.has(val)) return '[Circular]'
+          seen.add(val)
+        }
+        return val
+      })
+    } catch {
+      return String(value)
+    }
+  }
+
   const formatMessage = (message) => {
     if (Array.isArray(message)) {
-      // Si es un array, tomar el primer elemento o concatenar
       return message[0]?.message || message[0] || 'Error desconocido'
     }
     if (typeof message === 'object' && message !== null) {
-      return message.message || JSON.stringify(message)
+      if (message.message) return message.message
+      if (message.detail) return message.detail
+      return safeStringify(message)
     }
     return message || 'Error desconocido'
   }
