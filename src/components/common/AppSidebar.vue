@@ -246,6 +246,18 @@
           <span class="font-medium">Productos</span>
         </RouterLink>
         <RouterLink
+          to="/admin/modificadores"
+          @click="$emit('close')"
+          class="flex items-center px-4 py-3 rounded-lg transition-colors"
+          :class="
+            isActive('/admin/modificadores')
+              ? 'bg-primary text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          "
+        >
+          <span class="font-medium">Modificadores</span>
+        </RouterLink>
+        <RouterLink
           to="/admin/mesas"
           @click="$emit('close')"
           class="flex items-center px-4 py-3 rounded-lg transition-colors"

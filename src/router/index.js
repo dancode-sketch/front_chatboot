@@ -95,7 +95,13 @@ const router = createRouter({
         {
           path: 'catalog/products',
           name: 'admin-products',
-          component: () => import('@/views/admin/ProductsView.vue'),
+          component: () => import('@/views/admin/ProductAdminView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN'] }
+        },
+        {
+          path: 'modificadores',
+          name: 'admin-modificadores',
+          component: () => import('@/views/admin/GlobalModifiersView.vue'),
           meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {

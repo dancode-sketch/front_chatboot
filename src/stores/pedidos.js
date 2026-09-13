@@ -413,7 +413,15 @@ export const usePedidosStore = defineStore('pedidos', () => {
     fetchPedidosListosParaAsignar,
     asignarMotorizado,
     fetchMisPedidosDelivery,
-    actualizarEstadoDelivery,
+    // Compatibilidad unificada con useOrderStore
+    orders: pedidos,
+    fetchOrders: fetchPedidos,
+    fetchKdsOrders: async () => await fetchPedidos(),
+    getOrderById: (id) => pedidos.value.find(p => p.id === id),
+    marcarItemEstado: actualizarEstadoItem,
+    marcarItemListo: (orderId, itemId) => actualizarEstadoItem(orderId, itemId, 'LISTO'),
+    enviarItemsCocina: agregarItems,
     createPedido
   }
 })
+

@@ -1,5 +1,12 @@
 <template>
   <div class="flex flex-col h-full bg-gray-50">
+    <!-- Ticket de impresión (sólo para print) -->
+    <ThermalReceipt
+      v-if="showPrintReceipt"
+      :order="orderToPrint"
+      :type="printType"
+    />
+
     <!-- Lista de productos -->
     <div class="flex-1 overflow-y-auto p-4">
       <div v-if="!order.id" class="text-center text-gray-500 py-12">
@@ -56,10 +63,16 @@
         Enviar a Cocina
       </button>
       <button
-        class="bg-gray-700 text-white font-bold py-3 rounded-lg"
-        @click="preCuenta"
+        class="bg-indigo-600 text-white font-bold py-3 rounded-lg"
+        @click="printComanda"
       >
-        🖨️ Pre-Cuenta
+        🖨️ Imprimir Cocina
+      </button>
+      <button
+        class="bg-gray-700 text-white font-bold py-3 rounded-lg"
+        @click="printPreCuenta"
+      >
+        🧾 Imprimir Cuenta
       </button>
       <button
         class="bg-green-600 text-white font-bold py-3 rounded-lg"
@@ -98,8 +111,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, nextTick, onBeforeUnmount } from "vue";
 import { useOrderStore } from "@/stores/order";
+import ThermalReceipt from "@/components/ThermalReceipt.vue";
 import PaymentModal from "@/components/PaymentModal.vue";
 
 const props = defineProps({ orderId: Number });
@@ -107,6 +121,11 @@ const orderStore = useOrderStore();
 const showPreCuenta = ref(false);
 const preCuentaTicket = ref("");
 const showCobro = ref(false);
+
+const showPrintReceipt = ref(false);
+const printType = ref(null);
+const printOrder = ref(null);
+let printCleanupTimeout = null;
 
 const order = computed(() => orderStore.getOrderById(props.orderId) || {});
 const orderItems = computed(() => order.value.items || []);
@@ -123,6 +142,59 @@ function subQty(item) {
 }
 function removeItem(item) {
   orderStore.removeItem(item.id);
+}
+
+function cleanupPrint() {
+  showPrintReceipt.value = false;
+  printType.value = null;
+  printOrder.value = null;
+  if (printCleanupTimeout) {
+    clearTimeout(printCleanupTimeout);
+    printCleanupTimeout = null;
+  }
+}
+
+function schedulePrintCleanup() {
+  // `afterprint` sometimes doesn't fire in all browsers, so tenemos un fallback.
+  const handler = () => {
+    cleanupPrint();
+    window.removeEventListener("afterprint", handler);
+  };
+
+  window.addEventListener("afterprint", handler);
+  printCleanupTimeout = setTimeout(() => {
+    window.removeEventListener("afterprint", handler);
+    cleanupPrint();
+  }, 1500);
+}
+
+const orderToPrint = computed(() => {
+  if (printType.value === "precuenta") {
+    return printOrder.value || order.value;
+  }
+  return order.value;
+});
+
+async function printTicket(type, orderPayload = null) {
+  printType.value = type;
+  printOrder.value = orderPayload;
+  showPrintReceipt.value = true;
+  await nextTick();
+  window.print();
+  schedulePrintCleanup();
+}
+
+function printComanda() {
+  printTicket("comanda");
+}
+
+async function printPreCuenta() {
+  const res = await orderStore.getPreCuenta(order.value.id);
+  // Si la API devuelve el ticket como string, no imprimimos.
+  if (!res || typeof res !== "object") {
+    return;
+  }
+  await printTicket("precuenta", res);
 }
 
 const nuevosItems = computed(() =>
@@ -147,4 +219,8 @@ const totalPedido = computed(() =>
 if (!order.value.id) {
   orderStore.fetchOrders();
 }
+
+onBeforeUnmount(() => {
+  cleanupPrint();
+});
 </script>

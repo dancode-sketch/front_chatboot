@@ -48,6 +48,10 @@ export const ENDPOINTS = {
   PRODUCTS: '/api/admin/products',
   PRODUCT_BY_ID: (id) => `/api/admin/products/${id}`,
 
+  // Modificadores globales
+  MODIFICADORES: '/api/modificadores',
+  MODIFICADOR_BY_ID: (id) => `/api/modificadores/${id}`,
+
   // Delivery
   DELIVERY: '/api/admin/delivery',
 

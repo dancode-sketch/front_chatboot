@@ -223,13 +223,9 @@ function formatLocalDateForInput(date = new Date()) {
 }
 
 onMounted(async () => {
-  console.log("KDS view mounted");
   await fetchPedidos();
-
-  // También cargar datos específicos de KDS (items pendientes)
-  await orderStore.fetchKdsOrders();
-  console.log("KDS orders fetched", orderStore.orders);
 });
+
 
 async function fetchPedidos() {
   loading.value = true;
