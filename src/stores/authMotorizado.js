@@ -10,8 +10,23 @@ export const useAuthMotorizadoStore = defineStore('authMotorizado', () => {
   const token = ref(null)
   const loading = ref(false)
   
+  function isTokenValid(tokenStr) {
+    if (!tokenStr) return false
+    try {
+      const parts = tokenStr.split('.')
+      if (parts.length !== 3) return false
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+      if (payload.exp && Date.now() >= payload.exp * 1000) {
+        return false // Expirado
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
   // Getters
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value && isTokenValid(token.value))
   const motorizadoActual = computed(() => motorizado.value)
   
   // Cargar desde localStorage al inicializar
@@ -20,10 +35,16 @@ export const useAuthMotorizadoStore = defineStore('authMotorizado', () => {
     const savedMotorizado = localStorage.getItem(STORAGE_KEYS.MOTORIZADO_USER)
     
     if (savedToken && savedMotorizado) {
+      if (!isTokenValid(savedToken)) {
+        console.warn('⚠️ Token de motorizado expirado. Cerrando sesión.')
+        logout()
+        return
+      }
       token.value = savedToken
       motorizado.value = JSON.parse(savedMotorizado)
     }
   }
+
   
   /**
    * Obtiene los datos actualizados del motorizado desde el servidor

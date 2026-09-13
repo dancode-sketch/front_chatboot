@@ -4,17 +4,34 @@ import { apiClient } from '@/composables/useApi'
 import { ENDPOINTS, STORAGE_KEYS } from '@/utils/constants'
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
+  // Helper para validar si un JWT está expirado
+  function isTokenValid(tokenStr) {
+    if (!tokenStr) return false
+    try {
+      const parts = tokenStr.split('.')
+      if (parts.length !== 3) return false
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+      if (payload.exp && Date.now() >= payload.exp * 1000) {
+        return false // Expirado
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // State (inicializado desde localStorage de inmediato)
   const user = ref(null)
   const token = ref(null)
   const roles = ref([])
   const loading = ref(false)
   
   // Getters
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value && isTokenValid(token.value))
   const authHeader = computed(() => {
-    return token.value ? { Authorization: `Bearer ${token.value}` } : {}
+    return (token.value && isTokenValid(token.value)) ? { Authorization: `Bearer ${token.value}` } : {}
   })
+
   const roleList = computed(() => roles.value.map((r) => (typeof r === 'string' ? r.toUpperCase() : r)))
   const isAdmin = computed(() => hasRole('ADMIN'))
   
@@ -134,8 +151,10 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     token.value = null
     user.value = null
+    roles.value = []
     localStorage.removeItem(STORAGE_KEYS.TOKEN)
     localStorage.removeItem(STORAGE_KEYS.USER)
+    localStorage.removeItem(STORAGE_KEYS.ROLES)
   }
   
   /**
@@ -146,13 +165,17 @@ export const useAuthStore = defineStore('auth', () => {
     const storedUser = localStorage.getItem(STORAGE_KEYS.USER)
     const storedRoles = localStorage.getItem(STORAGE_KEYS.ROLES)
 
-    if (storedToken && storedUser) {
+    if (storedToken) {
+      if (!isTokenValid(storedToken)) {
+        console.warn('⚠️ Token expirado o inválido en localStorage. Cerrando sesión.')
+        logout()
+        return false
+      }
+
       try {
         token.value = storedToken
-        user.value = JSON.parse(storedUser)
+        user.value = storedUser ? JSON.parse(storedUser) : null
         setRoles(JSON.parse(storedRoles || '[]'))
-
-        console.log('Checked auth user', JSON.stringify(user.value))
 
         // si es administrador cargar datos iniciales
         if (hasRole('ADMIN')) {
@@ -168,12 +191,21 @@ export const useAuthStore = defineStore('auth', () => {
           useDeliveryStore().fetchConfig()
           useTemplatesStore().fetchTemplates()
         }
+        return true
       } catch (error) {
         console.error('Error parseando usuario guardado:', error)
         logout()
+        return false
       }
+    } else {
+      logout()
+      return false
     }
   }
+
+  // Inicializar inmediatamente al instanciar el store
+  checkAuth()
+
   
   /**
    * Obtiene perfil del usuario actual

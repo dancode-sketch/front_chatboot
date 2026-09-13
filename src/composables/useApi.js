@@ -27,12 +27,37 @@ apiClient.interceptors.request.use(
     let token = motorizadoToken || adminToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      // console.log('Enviando token:', token); // Descomenta para debug
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
+
+// Interceptor para manejar respuestas 401 (token expirado o inválido) y redirigir al login
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname || '';
+      if (currentPath.startsWith('/motorizado')) {
+        localStorage.removeItem(STORAGE_KEYS.MOTORIZADO_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.MOTORIZADO_USER);
+        if (!currentPath.includes('/login')) {
+          window.location.href = '/motorizado/login';
+        }
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.ROLES);
+        if (!currentPath.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 
 /**
  * Helpers para usar apiClient en stores con la misma API que useApi()
