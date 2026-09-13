@@ -20,11 +20,19 @@ export const apiClient = axios.create({
 // Interceptor para agregar token automáticamente (sin router)
 apiClient.interceptors.request.use(
   (config) => {
-    // Prioridad: motorizado > admin
+    const currentPath = window.location.pathname || '';
     const motorizadoToken = localStorage.getItem(STORAGE_KEYS.MOTORIZADO_TOKEN);
     const adminToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
 
-    let token = motorizadoToken || adminToken;
+    // Solo usar token de motorizado si estamos dentro del portal móvil /motorizado/*
+    // Para cualquier ruta administrativa (/admin/*, /dashboard/*, /pos/*) se usa adminToken
+    let token = null;
+    if (currentPath.startsWith('/motorizado')) {
+      token = motorizadoToken || adminToken;
+    } else {
+      token = adminToken;
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -33,7 +41,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar respuestas 401 (token expirado o inválido) y redirigir al login
+// Interceptor para manejar respuestas 401 (token expirado o inválido) y redirigir al login correspondiente
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -184,38 +192,25 @@ export function useApi() {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      // Si el token expiró o es inválido, redirigir a login
+      // Si el token expiró o es inválido, redirigir a login correspondiente
       if (error.response?.status === 401) {
         const authStore = useAuthStore()
-        // Determinar qué tipo de autenticación falló
-        const motorizadoToken = localStorage.getItem(STORAGE_KEYS.MOTORIZADO_TOKEN)
-        const adminToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
-        
-        // Si hay token de motorizado, limpiar y redirigir al login de motorizado
-        if (motorizadoToken) {
-          authStore.logout()
+        const currentPath = router.currentRoute?.value?.path || ''
+
+        if (currentPath.startsWith('/motorizado')) {
           localStorage.removeItem(STORAGE_KEYS.MOTORIZADO_TOKEN)
           localStorage.removeItem(STORAGE_KEYS.MOTORIZADO_USER)
-          if (!router.currentRoute?.value?.path?.includes('/login')) {
+          if (!currentPath.includes('/login')) {
             router.push('/motorizado/login')
           }
-        }
-        // Si hay token de admin, limpiar y redirigir al login de admin
-        else if (adminToken) {
+        } else {
           authStore.logout()
           localStorage.removeItem(STORAGE_KEYS.TOKEN)
           localStorage.removeItem(STORAGE_KEYS.USER)
-          if (!router.currentRoute?.value?.path?.includes('/login')) {
+          localStorage.removeItem(STORAGE_KEYS.ROLES)
+          if (!currentPath.includes('/login')) {
             router.push('/login')
           }
-        }
-        // Si no hay ningún token pero estamos en ruta de motorizado, no redirigir
-        else if (router.currentRoute?.value?.path?.startsWith('/motorizado')) {
-          // No hacer nada, dejar que el componente maneje el error
-        }
-        // Por defecto, redirigir a login admin solo si no estamos en login
-        else if (!router.currentRoute.value.path.includes('/login')) {
-          router.push('/login')
         }
       }
       return Promise.reject(error)

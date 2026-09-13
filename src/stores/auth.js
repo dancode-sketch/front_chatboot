@@ -33,7 +33,10 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const roleList = computed(() => roles.value.map((r) => (typeof r === 'string' ? r.toUpperCase() : r)))
-  const isAdmin = computed(() => hasRole('ADMIN'))
+  const isAdmin = computed(() => {
+    if (user.value?.is_superuser) return true
+    return hasRole('ADMIN')
+  })
   
   function normalizeRole(role) {
     if (!role) return null
@@ -77,11 +80,36 @@ export const useAuthStore = defineStore('auth', () => {
 
   function hasRole(roleName) {
     if (!roleName) return false
-    return roleList.value.includes(roleName.toUpperCase())
+    const name = roleName.toUpperCase()
+
+    // Superusuario siempre tiene acceso total a cualquier rol
+    if (user.value?.is_superuser) return true
+
+    // Verificar en roleList
+    if (roleList.value.includes(name)) return true
+
+    // Verificar en user.value?.role
+    if (typeof user.value?.role === 'string' && user.value.role.toUpperCase() === name) return true
+
+    // Verificar en user.value?.roles (array)
+    if (Array.isArray(user.value?.roles)) {
+      return user.value.roles.some((r) => {
+        if (typeof r === 'string') return r.toUpperCase() === name
+        if (r && typeof r === 'object') {
+          const val = r.role || r.name || r.rol || r.codigo
+          return typeof val === 'string' && val.toUpperCase() === name
+        }
+        return false
+      })
+    }
+
+    return false
   }
 
   function hasAnyRole(requiredRoles) {
     if (!requiredRoles) return false
+    // Si es superusuario o admin, siempre tiene acceso a cualquier ruta de rol de empleado
+    if (user.value?.is_superuser || roleList.value.includes('ADMIN')) return true
     const arrayRoles = Array.isArray(requiredRoles)
       ? requiredRoles
       : [requiredRoles]
@@ -175,7 +203,39 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         token.value = storedToken
         user.value = storedUser ? JSON.parse(storedUser) : null
-        setRoles(JSON.parse(storedRoles || '[]'))
+
+        let loadedRoles = []
+        if (storedRoles) {
+          try {
+            loadedRoles = JSON.parse(storedRoles)
+          } catch {}
+        }
+
+        // Si no hay roles en localStorage, recuperar desde user o JWT
+        if (!loadedRoles || loadedRoles.length === 0) {
+          if (Array.isArray(user.value?.roles) && user.value.roles.length > 0) {
+            loadedRoles = user.value.roles
+          } else if (user.value?.role) {
+            loadedRoles = [user.value.role]
+          } else {
+            try {
+              const parts = storedToken.split('.')
+              if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+                if (Array.isArray(payload.roles)) loadedRoles = payload.roles
+                else if (payload.superuser) loadedRoles = ['ADMIN']
+              }
+            } catch {}
+          }
+        }
+
+        // Si es superusuario, asegurar que ADMIN esté presente
+        if (user.value?.is_superuser && !loadedRoles.includes('ADMIN')) {
+          loadedRoles.push('ADMIN')
+        }
+
+        setRoles(loadedRoles)
+        localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(roles.value))
 
         // si es administrador cargar datos iniciales
         if (hasRole('ADMIN')) {

@@ -133,6 +133,25 @@ const router = createRouter({
           name: 'admin-caja',
           component: () => import('@/views/admin/CashRegisterView.vue'),
           meta: { requiresAuth: true, roles: ['ADMIN', 'CAJERO'] }
+        },
+        // Módulo Almacén e Inventario
+        {
+          path: 'inventario/insumos',
+          name: 'admin-inventario-insumos',
+          component: () => import('@/views/admin/inventory/InsumosView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'COCINA'] }
+        },
+        {
+          path: 'inventario/recetas',
+          name: 'admin-inventario-recetas',
+          component: () => import('@/views/admin/inventory/RecetasView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'COCINA'] }
+        },
+        {
+          path: 'inventario/movimientos',
+          name: 'admin-inventario-movimientos',
+          component: () => import('@/views/admin/inventory/MovimientosView.vue'),
+          meta: { requiresAuth: true, roles: ['ADMIN', 'COCINA'] }
         }
       ]
     },
@@ -197,6 +216,7 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else if (
     requiredRoles.length > 0 &&
+    !authStore.isAdmin &&
     !authStore.hasAnyRole(requiredRoles)
   ) {
     console.warn(

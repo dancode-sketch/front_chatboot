@@ -162,10 +162,14 @@ export const useClientesStore = defineStore('clientes', () => {
       return { success: false, error }
     }
     
-    // Agregar mensaje a la lista local
-    if (clienteSeleccionado.value?.telefono === telefono) {
-      mensajesActuales.value.push(data)
+    // Agregar mensaje a la lista local solo si no fue agregado por el WebSocket previamente
+    if (clienteSeleccionado.value?.telefono === telefono && data) {
+      const existe = mensajesActuales.value.some(m => String(m.id) === String(data.id))
+      if (!existe) {
+        mensajesActuales.value.push(data)
+      }
     }
+
     
     // Actualizar cliente en la lista para marcar que el bot está pausado
     const cliente = clientes.value.find(c => c.telefono === telefono)
@@ -240,13 +244,14 @@ export const useClientesStore = defineStore('clientes', () => {
    * Agrega un nuevo mensaje (desde WebSocket)
    */
   function agregarNuevoMensaje(mensaje) {
-    // Si el mensaje es del cliente actual, agregarlo
+    // Si el mensaje es del cliente actual, agregarlo evitando duplicados
     if (clienteSeleccionado.value?.id === mensaje.cliente_id) {
-      const existe = mensajesActuales.value.some(m => m.id === mensaje.id)
+      const existe = mensajesActuales.value.some(m => String(m.id) === String(mensaje.id))
       if (!existe) {
         mensajesActuales.value.push(mensaje)
       }
     }
+
     
     // Actualizar último mensaje en la lista de clientes
     const cliente = clientes.value.find(c => c.id === mensaje.cliente_id)

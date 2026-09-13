@@ -27,6 +27,33 @@ export function formatTime(date) {
 }
 
 /**
+ * Formatea una fecha para separador de chat estilo WhatsApp (Hoy, Ayer, D de MMMM)
+ * @param {string|Date} date - Fecha
+ * @returns {string} Texto descriptivo del día
+ */
+export function formatMessageDate(date) {
+  if (!date) return 'Hoy'
+  const d = dayjs(date)
+  if (!d.isValid()) return ''
+  
+  const today = dayjs().startOf('day')
+  const yesterday = dayjs().subtract(1, 'day').startOf('day')
+
+  if (d.isSame(today, 'day')) {
+    return 'Hoy'
+  }
+  if (d.isSame(yesterday, 'day')) {
+    return 'Ayer'
+  }
+  if (d.isSame(today, 'year')) {
+    const text = d.format('dddd, D [de] MMMM')
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+  return d.format('D [de] MMMM, YYYY')
+}
+
+
+/**
  * Formatea una fecha en tiempo relativo ("hace 5 minutos")
  * @param {string|Date} date - Fecha
  * @returns {string} Tiempo relativo

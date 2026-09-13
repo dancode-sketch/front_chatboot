@@ -129,12 +129,23 @@
         </span>
       </div>
 
-      <!-- Mensajes -->
-      <ChatBubble
-        v-for="mensaje in mensajes"
-        :key="mensaje.id"
-        :mensaje="mensaje"
-      />
+      <!-- Mensajes con Separadores de Fecha -->
+      <template v-for="(mensaje, index) in mensajes" :key="mensaje.id">
+        <!-- Separador de Fecha estilo WhatsApp -->
+        <div
+          v-if="debeMostrarSeparadorFecha(mensaje, index)"
+          class="flex justify-center my-3 sticky top-1 z-10 select-none"
+        >
+          <span
+            class="bg-white/95 backdrop-blur-sm text-gray-600 text-xs font-semibold px-3 py-1 rounded-full shadow-sm border border-gray-200 tracking-wide"
+          >
+            {{ obtenerSeparadorFecha(mensaje.fecha) }}
+          </span>
+        </div>
+
+        <ChatBubble :mensaje="mensaje" />
+      </template>
+
 
       <!-- Loading inicial -->
       <div
@@ -201,7 +212,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { useClientesStore } from "@/stores/clientes";
 import { useNotify } from "@/composables/useNotify";
-import { getInitials, formatPhone } from "@/utils/formatters";
+import { getInitials, formatPhone, formatMessageDate } from "@/utils/formatters";
 import ChatBubble from "./ChatBubble.vue";
 import ChatInput from "./ChatInput.vue";
 import EditarNombreModal from "./EditarNombreModal.vue";
@@ -221,9 +232,38 @@ const previousScrollHeight = ref(0);
 const mostrarModalNombre = ref(false);
 
 const cliente = computed(() => clientesStore.clienteSeleccionado);
-const mensajes = computed(() => clientesStore.mensajesActuales);
+
+// Deduplicación reactiva por ID para evitar cualquier duplicado en la interfaz
+const mensajes = computed(() => {
+  const list = clientesStore.mensajesActuales || [];
+  const seen = new Set();
+  return list.filter((m) => {
+    if (!m || !m.id) return true;
+    const key = String(m.id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+});
+
 const loadingMensajes = computed(() => clientesStore.loadingMensajes);
 const hasMore = computed(() => clientesStore.mensajesHasMore);
+
+// Determinar si corresponde mostrar el separador de día entre dos mensajes
+function debeMostrarSeparadorFecha(mensaje, index) {
+  if (index === 0) return true;
+  const prevMensaje = mensajes.value[index - 1];
+  if (!mensaje?.fecha || !prevMensaje?.fecha) return false;
+
+  const dateA = new Date(mensaje.fecha).toDateString();
+  const dateB = new Date(prevMensaje.fecha).toDateString();
+  return dateA !== dateB;
+}
+
+function obtenerSeparadorFecha(fecha) {
+  return formatMessageDate(fecha);
+}
+
 
 // Detectar scroll hacia arriba para cargar más mensajes
 function handleScroll(event) {
