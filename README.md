@@ -1,126 +1,109 @@
-# Dashboard Frontend - Sistema de Gestión de Pedidos y Chat
+# 💻 Resta — Frontend Dashboard & POS
 
-Dashboard administrativo para gestionar pedidos y atención al cliente del restaurante conectado a WhatsApp Business.
+Dashboard web administrativo y punto de venta (POS) para restaurantes, construido con **Vue 3 (Composition API)**, **Vite**, **Tailwind CSS** y **Pinia**, completamente integrado con el sistema de pedidos por **WhatsApp**, **KDS en tiempo real**, **caja chica**, **gestión de delivery** y **módulo de almacén & inventario**.
 
-## 🚀 Características
+---
 
-- **KDS (Kitchen Display System)**: Tablero Kanban para gestionar pedidos en tiempo real
-- **Chat de Atención al Cliente**: Interfaz tipo WhatsApp para responder mensajes
-- **WebSocket**: Actualizaciones en tiempo real sin refresh
-- **Autenticación**: Login con JWT tokens
-- **Responsive**: Diseñado para tablets y monitores
+## 🚀 Módulos Funcionales
 
-## 📦 Instalación
+La aplicación está organizada en 7 áreas departamentales con control de acceso basado en roles (RBAC):
 
+### 1. 🍳 Cocina & Operaciones
+- **KDS (Kitchen Display System)** (`/dashboard/kds`): Tablero Kanban reactivo en tiempo real con WebSockets (`/ws/kds`) para gestión de comandas (`PENDIENTE` → `PREPARANDO` → `LISTO`).
+- **Live Chat WhatsApp** (`/dashboard/chat`): Interfaz estilo WhatsApp con divisores inteligentes de fecha ("HOY", "AYER", fechas pasadas), control de pausa del bot conversacional y deduplicación en vivo de mensajes.
+
+### 2. 🍽️ Salón & Ventas (POS)
+- **Mapa de Mesas** (`/pos/mapa`): Vista gráfica de distribución del salón con estados en tiempo real (Disponible, Ocupada, Por Cobrar).
+- **Tomar Pedido** (`/pos/nueva-orden`): Punto de venta ágil para salón con modificadores (presas de pollo, guarniciones, cremas).
+- **Historial de Pedidos** (`/dashboard/pedidos`): Listado general de pedidos con filtros por fecha, estado y tipo de consumo.
+
+### 3. 💰 Finanzas (Separado del KDS)
+- **Flujo de Caja** (`/dashboard/caja`): Apertura de caja, registro de gastos/egresos en efectivo, control de ingresos por método de pago (Efectivo, Yape/Plin, Tarjeta) y cierre de turno (Arqueo Z). *Acceso exclusivo para Cajero y Admin.*
+
+### 4. 🛵 Delivery & Envíos
+- **Asignación de Pedidos** (`/admin/asignacion-pedidos`): Asignación de pedidos listos de cocina hacia motorizados disponibles ordenados por cercanía en km.
+- **Gestión de Motorizados** (`/admin/motorizados`): Alta de repartidores, teléfonos, usuarios y contraseñas/PINs, con control de disponibilidad en línea.
+- **Tarifas & Cobertura** (`/admin/delivery`): Configuración de radio máximo de reparto (km), costo base y tarifa por km adicional.
+- **Portal Móvil de Repartidor** (`/motorizado/login` y `/motorizado/panel`): Vista optimizada para smartphones donde el repartidor visualiza sus pedidos en ruta, mapa de navegación y confirmación de entrega.
+
+### 5. 📦 Almacén & Inventario (Nuevo)
+- **Stock de Insumos** (`/admin/inventario/insumos`): Control de existencias actuales, stocks mínimos, costos unitarios y alertas de reposición para carnes, abarrotes y descartables.
+- **Recetarios / Escandallos (BOM)** (`/admin/inventario/recetas`): Fichas técnicas por plato que desglosan insumos consumidos por porción, costo teórico y margen bruto.
+- **Movimientos & Mermas** (`/admin/inventario/movimientos`): Registro de compras/entradas, salidas automáticas por venta y registro de mermas operativas de cocina.
+
+### 6. 📋 Carta & Menú
+- **Categorías** (`/admin/catalog/categories`): Gestión de familias de productos.
+- **Platos y Productos** (`/admin/catalog/products`): Catálogo con precios, fotos, disponibilidad y sinónimos para el bot.
+- **Modificadores Globales** (`/admin/modificadores`): Grupos de opciones obligatorias y adicionales (ej. presas, bebidas, cremas).
+
+### 7. ⚙️ Configuración General
+- **Mesas / Zonas** (`/admin/mesas`): Mapeo de áreas del salón y numeración de mesas.
+- **Plantillas Bot** (`/admin/templates`): Mensajes automáticos de bienvenida, horarios y despedida del chatbot.
+- **Ajustes Generales** (`/admin/settings`): Datos fiscales del restaurante, moneda, teléfono y parámetros globales.
+
+---
+
+## 🔐 Control de Acceso por Roles (RBAC)
+
+La navegación y las rutas están protegidas según el perfil autenticado:
+
+| Rol | Vistas Habilitadas |
+| :--- | :--- |
+| **`ADMIN`** | Acceso irrestricto a todos los módulos y configuraciones (`is_superuser`). |
+| **`CAJERO`** | Flujo de Caja, Historial de Pedidos, Mapa de Mesas y KDS. |
+| **`MESERO`** | Mapa de Mesas, Tomar Pedidos y Consulta de Comandas. |
+| **`COCINA`** | KDS Cocina y Módulo de Almacén & Inventario. |
+| **`MOTORIZADO`**| Acceso exclusivo al Portal Móvil de Repartidor (`/motorizado/*`). |
+
+> [!IMPORTANT]
+> Los tokens de administrador (`auth_token`) y de repartidor (`motorizado_token`) están completamente aislados en `localStorage`. El interceptor HTTP detecta el contexto de la ruta activa para no mezclar sesiones ni provocar cierres de sesión accidentales.
+
+---
+
+## 📦 Instalación y Ejecución Local
+
+### 1. Instalar dependencias
 ```bash
-# Instalar dependencias
 npm install
+```
 
-# Iniciar servidor de desarrollo
+### 2. Iniciar en modo desarrollo
+```bash
 npm run dev
+```
+La aplicación correrá en `http://localhost:5173`.
 
-# Compilar para producción
+### 3. Compilar para producción
+```bash
 npm run build
 ```
+Genera la carpeta optimizada `dist/` en segundos sin errores.
 
-## 🔧 Configuración
+---
 
-El proyecto está configurado para conectarse al backend en `http://localhost:8000`.
+## 🔧 Configuración de Entorno
 
-Si necesitas cambiar la URL del backend, edita el proxy en `vite.config.js`.
+En desarrollo local, el frontend utiliza el proxy configurado en `vite.config.js` para redirigir `/api`, `/ws` y `/static` hacia `http://127.0.0.1:8000`.
 
-## 📱 Acceso por Defecto
-
-- **URL**: http://localhost:5173
-- **Usuario**: admin
-- **Contraseña**: admin123
-
-⚠️ **Cambia estas credenciales después del primer login**
-
-<blockquote>
-El frontend usa rutas relativas (`/api/...`) y en desarrollo un proxy Vite (ver `vite.config.js`). Esto evita problemas de CORS.
-
-**Importante para desarrollo:** asegúrate de que no existe la variable de entorno `VITE_API_URL` o que está vacía; de lo contrario las peticiones se harán contra su valor (ej. `http://192.168...:8000`) y saltará el error de CORS. El proxy sólo funciona cuando la URL es relativa. En producción puedes establecer `VITE_API_URL` al dominio real de la API.
-
-</blockquote>
-
-## 🏗️ Estructura del Proyecto
-
-```
-src/
-├── main.js              # Punto de entrada
-├── App.vue              # Componente raíz
-├── router/              # Configuración de rutas
-├── stores/              # Stores de Pinia
-├── views/               # Vistas principales
-├── components/          # Componentes reutilizables
-├── composables/         # Composables de Vue
-└── utils/               # Utilidades y constantes
+En producción (ej. **Cloudflare Pages**), define las siguientes variables de entorno:
+```env
+VITE_API_URL=https://api-resta.tudominio.com
+VITE_WS_URL=wss://api-resta.tudominio.com
+VITE_RESTAURANTE_LAT=-12.046374
+VITE_RESTAURANTE_LON=-77.042793
 ```
 
-## 🔐 Autenticación
-
-Todas las rutas excepto `/login` requieren autenticación. El token JWT se guarda en localStorage.
-
-## 📡 WebSocket
-
-El dashboard se conecta automáticamente al WebSocket del backend para recibir:
-
-- Nuevos pedidos
-- Actualizaciones de estado
-- Nuevos mensajes de clientes
-- Cambios en estado del bot
-
-## 🔗 API Endpoints
-
-El frontend consume el siguiente conjunto de rutas expuestas por el backend. Se recomienda revisar el OpenAPI generado por FastAPI para obtener esquemas detallados.
-
-### Autenticación
-
-- `POST /api/auth/login`
-- `GET /api/auth/me` (perfil)
-
-### Clientes & Chat
-
-- `/api/clientes/activos`
-- `/api/clientes/{telefono}/mensajes`
-- etc. (chat ya implementado en la vista de chat)
-
-### Pedidos
-
-- `POST /api/pedidos`
-- `GET /api/pedidos` (filtros `?tipo=...&estado=...`)
-- `GET /api/pedidos/{id}`
-- `PATCH /api/pedidos/{id}/estado` (cambio de estado)
-- `PATCH /api/pedidos/{id}/motorizado` (asignar motorizado)
-- WebSocket eventos `new_order`, `order_updated`
-
-### Administración (requiere rol ADMIN)
-
-- **Settings dinámicos**: `GET /api/admin/settings`, `PATCH /api/admin/settings`
-- **Categorías**: CRUD con `/api/admin/categories`
-- **Productos**: CRUD con `/api/admin/products` (incluye campo `sinonimos[]`)
-- **Delivery**: `GET/PATCH /api/admin/delivery`
-- **Plantillas**: CRUD con `/api/admin/templates`
-
-### Otros
-
-- `/api/motorizados` (lista, creación, actualización, disponibilidad)
-- `/api/pedidos/delivery/mis-pedidos` (para panel de motorizado)
-
-Los enums importantes que maneja el frontend son:
-
-- `SettingType`: STRING, INT, FLOAT, BOOL, JSON
-- `EstadoPedido`: PENDIENTE, PREPARANDO, LISTO, ASIGNADO, EN_CAMINO, ENTREGADO, CANCELADO
-- `TipoEntrega`: DELIVERY, RECOJO, MESA, PRESENCIAL
+---
 
 ## 🎨 Stack Tecnológico
 
-- Vue 3 (Composition API)
-- Vite
-- Tailwind CSS
-- Pinia
-- Vue Router
-- Axios
-- Day.js
-- Vue Toastification
+- **Framework:** Vue 3 (Composition API, `<script setup>`)
+- **Build Tool:** Vite 5
+- **Estilos:** Tailwind CSS
+- **Estado Global:** Pinia
+- **Enrutamiento:** Vue Router 4 (Guards con validación JWT exp y RBAC)
+- **Iconos:** Lucide Vue Next
+- **HTTP & Tiempo Real:** Axios (con interceptores inteligentes) y WebSockets nativos
+- **Fechas:** Day.js (con localización en español)
+- **Notificaciones:** Vue Toastification
+
